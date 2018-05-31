@@ -1,5 +1,5 @@
-import waitGPU
-waitGPU.wait(utilization=20, interval=60)
+#  import waitGPU
+#  waitGPU.wait(utilization=20, interval=60)
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -14,6 +14,8 @@ import argparse
 
 import problems as pblm
 from trainer import *
+
+from attacks import pgd_l2, pgd
 
 if __name__ == "__main__": 
     parser = argparse.ArgumentParser()
@@ -30,6 +32,8 @@ if __name__ == "__main__":
     parser.add_argument('--scatter_grad', action='store_true')
     parser.add_argument('--l1_proj', type=int, default=None)
 
+    parser.add_argument('--attack', action='store_true')
+
     args = parser.parse_args()
     args.prefix = args.prefix or 'svhn_conv_{:.4f}_{:.4f}_0'.format(args.epsilon, args.lr).replace(".","_")
     setproctitle.setproctitle(args.prefix) 
@@ -44,6 +48,22 @@ if __name__ == "__main__":
 
     # new svhn
     model = pblm.svhn_model().cuda()
+
+    if args.attack:
+        model.load_state_dict(torch.load('../models/svhn.pth'))
+        with open("attack_svhn.txt", "w") as f:
+            f.write("eps acc\n")
+            for eps in range(1, 15):
+                eps /= 10
+                print(eps)
+                niters = 100
+                alpha  = 2.5 * eps / niters
+                total_err, total_err_attack, _ = pgd_l2(test_loader, model,
+                        eps, niters=niters, alpha=alpha, restarts=10,
+                        verbose=False, robust=False)
+                print("{} {}\n".format(eps, 1-total_err_attack))
+                f.write("{} {}\n".format(eps, 1-total_err_attack))
+        exit()
 
     opt = optim.Adam(model.parameters(), lr=args.lr)
     for t in range(args.epochs):
