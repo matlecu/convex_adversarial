@@ -53,12 +53,15 @@ if __name__ == "__main__":
         model.load_state_dict(torch.load('../models/svhn.pth'))
         with open("attack_svhn.txt", "w") as f:
             f.write("eps acc\n")
-            for eps in range(1, 15):
-                eps /= 10
+            #  for eps in range(1, 15):
+                #  eps /= 10
+            for eps in range(1, 17):
+                eps *= 0.005
                 print(eps)
                 niters = 100
                 alpha  = 2.5 * eps / niters
-                total_err, total_err_attack, _ = pgd_l2(test_loader, model,
+                #  alpha  = 0.01
+                total_err, total_err_attack, _ = pgd(test_loader, model,
                         eps, niters=niters, alpha=alpha, restarts=10,
                         verbose=False, robust=False)
                 print("{} {}\n".format(eps, 1-total_err_attack))
